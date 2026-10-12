@@ -7,7 +7,7 @@ TMDB supplies what exists (search, series, seasons, episodes, movies and posters
 ## Progress
 
 - [x] **1. A clean Android toolchain** — JDK 17, Android CLI, SDK, adb and the phone over USB
-- [ ] **2. Project and editor** — React Native project, first build, strict checks, Neovim
+- [x] **2. Project and editor** — React Native project, first build, strict checks, Neovim
 - [ ] **3. Your own types and progress logic** — domain types, percent, label and badge
 - [ ] **4. Talking to TMDB** — token, fixtures, fetch client and mapping
 - [ ] **5. Designing the database** — SQLite schema, migration and tested queries
