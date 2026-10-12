@@ -1,97 +1,53 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# MediaTracker
 
-# Getting Started
+An Android app in React Native and strict TypeScript that tracks the movies, series and anime I watch.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+TMDB supplies what exists (search, series, seasons, episodes, movies and posters), and a SQLite database on the phone remembers what I have watched. The screens only show data and pass my taps on, while pure, tested functions calculate progress. The finished app shows a poster grid filtered by Watching, Done and Watchlist, with a progress badge on each poster, and a details page where I mark episodes as watched and see when the next episode airs.
 
-## Step 1: Start Metro
+## Progress
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+- [x] **1. A clean Android toolchain** — JDK 17, Android CLI, SDK, adb and the phone over USB
+- [ ] **2. Project and editor** — React Native project, first build, strict checks, Neovim
+- [ ] **3. Your own types and progress logic** — domain types, percent, label and badge
+- [ ] **4. Talking to TMDB** — token, fixtures, fetch client and mapping
+- [ ] **5. Designing the database** — SQLite schema, migration and tested queries
+- [ ] **6. Screens and navigation** — typed stack with Home, Search and Details
+- [ ] **7. The main screen grid** — status filter, poster grid, badges and TMDB credits
+- [ ] **8. Search and add** — debounced search and adding titles from details
+- [ ] **9. Details and tracking** — seasons, watched episodes, next episode and Done
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+The step-by-step plan for every milestone is in the [workbook](docs/MediaTracker-Workbook.pdf).
 
-```sh
-# Using npm
-npm start
+## Structure
 
-# OR using Yarn
-yarn start
+```
+MediaTracker/
+├── android/        generated Android project, built by Gradle
+├── assets/         bundled images (the TMDB logo)
+├── docs/
+│   └── MediaTracker-Workbook.pdf
+└── src/
+    ├── config/     TMDB token (git-ignored) and its example file
+    ├── domain/     types and pure progress logic, no I/O
+    ├── tmdb/       TMDB client, response types, mapping and fixtures
+    ├── db/         SQLite access, schema and queries
+    ├── hooks/      reusable React hooks
+    ├── navigation/ stack navigator and route types
+    ├── components/ small reusable UI pieces
+    └── screens/    Home, Search and Details
 ```
 
-## Step 2: Build and run your app
+## Commands
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
 ```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+npm install                       install dependencies
+npm start                         start Metro (keep it running in its own terminal)
+npm run android                   build, install and open the app on the phone
+npm run check                     type check, lint and tests in one go
+npm run typecheck                 type check only
+npm run lint                      lint only
+npm test                          run all tests
+adb devices                       check that the phone is connected
+adb logcat ReactNativeJS:V *:S    show the app's log output
+android sdk list                  list installed Android SDK packages
 ```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
