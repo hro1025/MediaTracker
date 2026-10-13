@@ -38,12 +38,17 @@ export type NextEpisode = EpisodeRef & { airDate: string };
 export type TvDetails = {
   tmdbId: number;
   name: string;
-  posterPath?: string | null;
+  posterPath: string | null;
   overview: string;
   seasons: SeasonSummary[];
   totalEpisodes: number;
   nextEpisode: NextEpisode | null;
 };
+
+export type Badge =
+  | { kind: 'check' }
+  | { kind: 'percent'; value: number }
+  | { kind: 'none' };
 
 export type MovieDetails = {
   tmdbId: number;
