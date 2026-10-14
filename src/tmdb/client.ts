@@ -42,3 +42,13 @@ export async function tmdbGet(
 
   return await response.json();
 }
+
+export function describeTmdbError(error: unknown): string {
+  if (error instanceof TmdbError) {
+    if (error.status === 401) {
+      return 'TMDB rejected the token. Check src/config/secrets.ts.';
+    }
+    return `TMDB had a problem (${error.status}). Try again later.`;
+  }
+  return 'Could not reach TMDB. Check your connection.';
+}

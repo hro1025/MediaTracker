@@ -1,20 +1,27 @@
-import { NewTitle } from '../../domain/types';
-import { Db } from '../database';
-import { migrate } from '../schema';
+import type { Db } from '../database';
 import { createTestDb } from '../testDb';
-import { addTitle, getTitle, listTitlesByStatus, setStatus } from '../titles';
+import { migrate } from '../schema';
+import {
+  addTitle,
+  getTitle,
+  listTitlesByStatus,
+  removeTitle,
+  setStatus,
+  updateTotalEpisodes,
+} from '../titles';
+import { listWatched, markEpisode, resetProgress } from '../episodes';
+import type { NewTitle } from '../../domain/types';
 
-const breakingBad: NewTitle = {
-  tmdbId: 1396,
-  mediaType: 'tv',
-  name: 'Breaking Bad',
-  posterPath: null,
-  totalEpisodes: 62,
-  status: 'watching',
-};
-
-function makeNewTitle(overrides: Partial<NewTitle>): NewTitle {
-  return { ...breakingBad, ...overrides };
+function newTitle(overrides: Partial<NewTitle> = {}): NewTitle {
+  return {
+    tmdbId: 1396,
+    mediaType: 'tv',
+    name: 'Breaking Bad',
+    posterPath: null,
+    totalEpisodes: 62,
+    status: 'watching',
+    ...overrides,
+  };
 }
 
 let db: Db;
@@ -25,47 +32,65 @@ beforeEach(async () => {
 });
 
 describe('addTitle and getTitle', () => {
-  test('adding the same title twice keeps one row', async () => {
-    expect(await addTitle(db, breakingBad, 1000)).toBe(1);
-    expect(await addTitle(db, breakingBad, 1000)).toBe(1);
-    const count = await db.execute('SELECT COUNT(*) AS n FROM titles');
-    expect(count.rows[0]?.n).toBe(1);
+  test('adding the same title twice gives the same id and one row', async () => {
+    const first = await addTitle(db, newTitle(), 1000);
+    const second = await addTitle(db, newTitle(), 2000);
+
+    expect(first).toBe(1);
+    expect(second).toBe(1);
+
+    const result = await db.execute('SELECT COUNT(*) AS n FROM titles');
+    expect(result.rows[0]?.n).toBe(1);
   });
 
-  test('reads a title back with its fields', async () => {
-    await addTitle(db, breakingBad, 1000);
+  test('getTitle returns the stored title', async () => {
+    await addTitle(db, newTitle(), 1000);
+
     const title = await getTitle(db, 'tv', 1396);
+
     expect(title?.name).toBe('Breaking Bad');
     expect(title?.watchedCount).toBe(0);
     expect(title?.addedAt).toBe(1000);
     expect(title?.lastWatchedAt).toBeNull();
   });
 
-  test('returns null for a title that is not there', async () => {
-    await addTitle(db, breakingBad, 1000);
+  test('getTitle with the wrong media type returns null', async () => {
+    await addTitle(db, newTitle(), 1000);
+
     expect(await getTitle(db, 'movie', 1396)).toBeNull();
   });
 });
 
 describe('listTitlesByStatus and setStatus', () => {
-  test('lists newest first and moves titles between statuses', async () => {
-    const idA = await addTitle(db, makeNewTitle({ tmdbId: 1, name: 'A' }), 100);
-    await addTitle(db, makeNewTitle({ tmdbId: 2, name: 'B' }), 200);
+  beforeEach(async () => {
+    await addTitle(db, newTitle({ tmdbId: 1, name: 'A' }), 100);
+    await addTitle(db, newTitle({ tmdbId: 2, name: 'B' }), 200);
     await addTitle(
       db,
-      makeNewTitle({
+      newTitle({
         tmdbId: 3,
-        name: 'C',
         mediaType: 'movie',
+        name: 'C',
         status: 'watchlist',
       }),
       300,
     );
+  });
 
+  test('lists newest first', async () => {
     const watching = await listTitlesByStatus(db, 'watching');
-    expect(watching.map(t => t.name)).toEqual(['B', 'A']);
 
-    await setStatus(db, idA, 'done');
+    expect(watching.map(t => t.name)).toEqual(['B', 'A']);
+  });
+
+  test('setStatus moves a title to another tab', async () => {
+    const a = await getTitle(db, 'tv', 1);
+    if (a === null) {
+      throw new Error('A was not added');
+    }
+
+    await setStatus(db, a.id, 'done');
+
     expect((await listTitlesByStatus(db, 'watching')).map(t => t.name)).toEqual(
       ['B'],
     );
@@ -75,5 +100,53 @@ describe('listTitlesByStatus and setStatus', () => {
     expect(
       (await listTitlesByStatus(db, 'watchlist')).map(t => t.name),
     ).toEqual(['C']);
+  });
+
+  test('setStatus with an unknown id changes nothing', async () => {
+    await setStatus(db, 999, 'done');
+
+    expect(await listTitlesByStatus(db, 'done')).toHaveLength(0);
+  });
+});
+
+describe('updateTotalEpisodes', () => {
+  test('changes the stored total', async () => {
+    const id = await addTitle(db, newTitle(), 1000);
+
+    await updateTotalEpisodes(db, id, 70);
+
+    const title = await getTitle(db, 'tv', 1396);
+    expect(title?.totalEpisodes).toBe(70);
+  });
+});
+
+describe('removeTitle', () => {
+  test('removes the title and its watched episodes', async () => {
+    const id = await addTitle(db, newTitle(), 1000);
+    await markEpisode(db, id, { seasonNumber: 1, episodeNumber: 1 }, 2000);
+
+    await removeTitle(db, id);
+
+    expect(await getTitle(db, 'tv', 1396)).toBeNull();
+    const result = await db.execute(
+      'SELECT COUNT(*) AS n FROM watched_episodes',
+    );
+    expect(result.rows[0]?.n).toBe(0);
+  });
+});
+
+describe('resetProgress', () => {
+  test('unmarks everything but keeps the title', async () => {
+    const id = await addTitle(db, newTitle(), 1000);
+    await markEpisode(db, id, { seasonNumber: 1, episodeNumber: 1 }, 2000);
+    await markEpisode(db, id, { seasonNumber: 1, episodeNumber: 2 }, 2000);
+
+    await resetProgress(db, id);
+
+    expect(await listWatched(db, id)).toEqual([]);
+    const title = await getTitle(db, 'tv', 1396);
+    expect(title?.watchedCount).toBe(0);
+    expect(title?.lastWatchedAt).toBeNull();
+    expect(title?.status).toBe('watching');
   });
 });

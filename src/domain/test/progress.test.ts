@@ -1,8 +1,15 @@
 import {
+  episodesUpTo,
+  formatNextEpisode,
+  isAired,
+  isoDate,
   latestEpisode,
+  nextToWatch,
   progressBadge,
   progressLabel,
   progressPercent,
+  shortDate,
+  statusAfterMark,
 } from '../progress';
 import { TrackedTitle } from '../types';
 
@@ -122,5 +129,137 @@ describe('progressBadge', () => {
     expect(progressBadge(makeTitle({ status: 'watchlist' }))).toEqual({
       kind: 'none',
     });
+  });
+});
+
+describe('episodesUpTo', () => {
+  const seasons = [
+    { seasonNumber: 1, name: 'Season 1', episodeCount: 3 },
+    { seasonNumber: 2, name: 'Season 2', episodeCount: 4 },
+    { seasonNumber: 3, name: 'Season 3', episodeCount: 5 },
+  ];
+
+  test('includes all earlier seasons and the target season up to the episode', () => {
+    const refs = episodesUpTo(seasons, { seasonNumber: 2, episodeNumber: 2 });
+
+    expect(refs).toEqual([
+      { seasonNumber: 1, episodeNumber: 1 },
+      { seasonNumber: 1, episodeNumber: 2 },
+      { seasonNumber: 1, episodeNumber: 3 },
+      { seasonNumber: 2, episodeNumber: 1 },
+      { seasonNumber: 2, episodeNumber: 2 },
+    ]);
+  });
+
+  test('the first episode gives only itself', () => {
+    expect(
+      episodesUpTo(seasons, { seasonNumber: 1, episodeNumber: 1 }),
+    ).toEqual([{ seasonNumber: 1, episodeNumber: 1 }]);
+  });
+});
+
+describe('statusAfterMark', () => {
+  test('watchlist becomes watching', () => {
+    expect(statusAfterMark('watchlist')).toBe('watching');
+  });
+
+  test('watching stays watching', () => {
+    expect(statusAfterMark('watching')).toBe('watching');
+  });
+
+  test('done stays done', () => {
+    expect(statusAfterMark('done')).toBe('done');
+  });
+});
+
+describe('nextToWatch', () => {
+  const seasons = [
+    { seasonNumber: 1, name: 'Season 1', episodeCount: 3 },
+    { seasonNumber: 2, name: 'Season 2', episodeCount: 4 },
+  ];
+
+  test('nothing watched gives S1 E1', () => {
+    expect(nextToWatch(seasons, [])).toEqual({
+      seasonNumber: 1,
+      episodeNumber: 1,
+    });
+  });
+
+  test('in the middle of a season gives the next episode', () => {
+    expect(
+      nextToWatch(seasons, [{ seasonNumber: 1, episodeNumber: 2 }]),
+    ).toEqual({ seasonNumber: 1, episodeNumber: 3 });
+  });
+
+  test('after the last episode of a season gives the next season', () => {
+    expect(
+      nextToWatch(seasons, [{ seasonNumber: 1, episodeNumber: 3 }]),
+    ).toEqual({ seasonNumber: 2, episodeNumber: 1 });
+  });
+
+  test('after the very last episode gives null', () => {
+    expect(
+      nextToWatch(seasons, [{ seasonNumber: 2, episodeNumber: 4 }]),
+    ).toBeNull();
+  });
+});
+
+describe('formatNextEpisode', () => {
+  const next = { seasonNumber: 3, episodeNumber: 4, airDate: '2026-10-18' };
+
+  test('a future date is shown', () => {
+    expect(formatNextEpisode(next, '2026-10-12')).toBe('Next: S3 E4 · 18 Oct');
+  });
+
+  test('a past date gives null', () => {
+    expect(
+      formatNextEpisode({ ...next, airDate: '2026-10-01' }, '2026-10-12'),
+    ).toBeNull();
+  });
+
+  test('today is still shown', () => {
+    expect(
+      formatNextEpisode({ ...next, airDate: '2026-10-12' }, '2026-10-12'),
+    ).toBe('Next: S3 E4 · 12 Oct');
+  });
+
+  test('no next episode gives null', () => {
+    expect(formatNextEpisode(null, '2026-10-12')).toBeNull();
+  });
+
+  test('the day has no leading zero', () => {
+    expect(
+      formatNextEpisode({ ...next, airDate: '2026-11-05' }, '2026-10-12'),
+    ).toBe('Next: S3 E4 · 5 Nov');
+  });
+});
+
+describe('isoDate', () => {
+  test('pads month and day', () => {
+    expect(isoDate(new Date(2026, 0, 7))).toBe('2026-01-07');
+  });
+});
+
+describe('isAired', () => {
+  test('a date before today has aired', () => {
+    expect(isAired('2026-10-07', '2026-10-14')).toBe(true);
+  });
+
+  test('today has not aired yet', () => {
+    expect(isAired('2026-10-14', '2026-10-14')).toBe(false);
+  });
+
+  test('a future date has not aired', () => {
+    expect(isAired('2026-10-21', '2026-10-14')).toBe(false);
+  });
+
+  test('no date has not aired', () => {
+    expect(isAired(null, '2026-10-14')).toBe(false);
+  });
+});
+
+describe('shortDate', () => {
+  test('formats day and month', () => {
+    expect(shortDate('2026-10-07')).toBe('7 Oct');
   });
 });

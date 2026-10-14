@@ -45,6 +45,10 @@ export type TvDetails = {
   nextEpisode: NextEpisode | null;
 };
 
+export type LoadedDetails =
+  | { mediaType: 'tv'; details: TvDetails }
+  | { mediaType: 'movie'; details: MovieDetails };
+
 export type Badge =
   | { kind: 'check' }
   | { kind: 'percent'; value: number }

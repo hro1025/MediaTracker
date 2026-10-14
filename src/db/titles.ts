@@ -115,3 +115,18 @@ export async function setStatus(
 ): Promise<void> {
   await db.execute('UPDATE titles SET status = ? WHERE id = ?', [status, id]);
 }
+
+export async function updateTotalEpisodes(
+  db: Db,
+  id: number,
+  totalEpisodes: number,
+): Promise<void> {
+  await db.execute('UPDATE titles SET total_episodes = ? WHERE id = ?', [
+    totalEpisodes,
+    id,
+  ]);
+}
+
+export async function removeTitle(db: Db, id: number): Promise<void> {
+  await db.execute('DELETE FROM titles WHERE id = ?', [id]);
+}
