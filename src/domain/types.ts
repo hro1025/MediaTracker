@@ -58,3 +58,8 @@ export type MovieDetails = {
   runtimeMinutes: number | null;
   releaseDate: string | null;
 };
+
+export type NewTitle = Pick<
+  TrackedTitle,
+  'tmdbId' | 'mediaType' | 'name' | 'posterPath' | 'totalEpisodes' | 'status'
+>;

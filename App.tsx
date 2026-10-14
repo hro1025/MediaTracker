@@ -1,41 +1,41 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import {
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { useEffect } from 'react';
+import { StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { getAppDb } from './src/db/appDb';
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+  // TEMPORARY (step 5.7): remove after the check
+  useEffect(() => {
+    async function testDb() {
+      try {
+        const db = await getAppDb();
+        const result = await db.execute('SELECT COUNT(*) AS n FROM titles');
+        console.log('Titles:', result.rows[0]);
+      } catch (e) {
+        console.log('DB error:', e);
+      }
+    }
+    testDb();
+  }, []);
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <View style={centerContainer.container}>
-        <Text style={centerContainer.Text}>Media Tracker!</Text>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.container}>
+        <Text style={styles.title}>Media Tracker!</Text>
       </View>
     </SafeAreaProvider>
   );
 }
 
-const centerContainer = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  Text: {
-    fontSize: 30,
-    color: 'white',
+  title: {
+    fontSize: 24,
   },
 });
 
