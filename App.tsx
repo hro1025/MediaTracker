@@ -5,6 +5,7 @@
  * @format
  */
 
+import { useEffect } from 'react';
 import {
   StatusBar,
   StyleSheet,
@@ -13,9 +14,23 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { searchTitles } from './src/tmdb/api';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
+
+  // TEMPORARY (step 4.7): remove after the Check.
+  useEffect(() => {
+    async function testSearch() {
+      try {
+        const results = await searchTitles('matrix');
+        console.log('TMDB results:', results.length);
+      } catch (error) {
+        console.log('TMDB error:', error);
+      }
+    }
+    testSearch();
+  }, []);
 
   return (
     <SafeAreaProvider>
