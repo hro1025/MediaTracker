@@ -124,7 +124,7 @@ export function HomeScreen({ navigation }: Props): React.JSX.Element {
           icon: 'restart-alt' as const,
           title: `Reset progress of ${titles}?`,
           message:
-            'All watched episodes will be unmarked. The titles stay in your list.',
+            'All watched episodes will be unmarked. Finished titles move back to Watching.',
           confirmLabel: 'Reset',
         }
       : {

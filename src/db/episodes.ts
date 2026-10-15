@@ -47,13 +47,18 @@ export async function listWatched(
     episodeNumber: readNumber(row, 'episode_number'),
   }));
 }
+
 export async function resetProgress(db: Db, titleId: number): Promise<void> {
   await db.execute('DELETE FROM watched_episodes WHERE title_id = ?', [
     titleId,
   ]);
-  await db.execute('UPDATE titles SET last_watched_at = NULL WHERE id = ?', [
-    titleId,
-  ]);
+  await db.execute(
+    `UPDATE titles
+     SET last_watched_at = NULL,
+         status = CASE WHEN status = 'done' THEN 'watching' ELSE status END
+     WHERE id = ?`,
+    [titleId],
+  );
 }
 
 export async function markEpisodes(

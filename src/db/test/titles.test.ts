@@ -150,6 +150,22 @@ describe('resetProgress', () => {
     expect(title?.lastWatchedAt).toBeNull();
     expect(title?.status).toBe('watching');
   });
+
+  test('a done title goes back to watching', async () => {
+    const id = await addTitle(db, newTitle({ status: 'done' }), 1000);
+
+    await resetProgress(db, id);
+
+    expect((await getTitle(db, 'tv', 1396))?.status).toBe('watching');
+  });
+
+  test('a watchlist title stays on the watchlist', async () => {
+    const id = await addTitle(db, newTitle({ status: 'watchlist' }), 1000);
+
+    await resetProgress(db, id);
+
+    expect((await getTitle(db, 'tv', 1396))?.status).toBe('watchlist');
+  });
 });
 
 describe('markMovieWatched', () => {
