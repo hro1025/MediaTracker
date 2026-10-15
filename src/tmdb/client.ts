@@ -1,37 +1,43 @@
-import { TMDB_READ_TOKEN } from '../config/secrets';
-
 export const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 export class TmdbError extends Error {
-  readonly status: number;
+  status: number;
 
   constructor(status: number) {
     super(`TMDB request failed with status ${status}`);
     this.name = 'TmdbError';
     this.status = status;
-    // Keeps `instanceof TmdbError` working after Babel compiles the class.
     Object.setPrototypeOf(this, TmdbError.prototype);
   }
+}
+
+// The user's own token, loaded from SQLite at start.
+let token: string | null = null;
+
+export function setTmdbToken(value: string | null): void {
+  token = value;
+}
+
+export function hasTmdbToken(): boolean {
+  return token !== null;
 }
 
 export async function tmdbGet(
   path: string,
   params: Record<string, string> = {},
 ): Promise<unknown> {
+  if (token === null) {
+    throw new TmdbError(401);
+  }
+
   const query = Object.entries(params)
-    .map(
-      ([key, value]) =>
-        `${encodeURIComponent(key)}=${encodeURIComponent(value)}`,
-    )
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&');
-  const url =
-    query === ''
-      ? `${TMDB_BASE_URL}${path}`
-      : `${TMDB_BASE_URL}${path}?${query}`;
+  const url = `${TMDB_BASE_URL}${path}${query !== '' ? `?${query}` : ''}`;
 
   const response = await fetch(url, {
     headers: {
-      Authorization: `Bearer ${TMDB_READ_TOKEN}`,
+      Authorization: `Bearer ${token}`,
       accept: 'application/json',
     },
   });
@@ -39,14 +45,13 @@ export async function tmdbGet(
   if (!response.ok) {
     throw new TmdbError(response.status);
   }
-
-  return await response.json();
+  return response.json();
 }
 
 export function describeTmdbError(error: unknown): string {
   if (error instanceof TmdbError) {
     if (error.status === 401) {
-      return 'TMDB rejected the token. Check src/config/secrets.ts.';
+      return 'No valid TMDB token. Add yours in About (⋮ on the home screen).';
     }
     return `TMDB had a problem (${error.status}). Try again later.`;
   }

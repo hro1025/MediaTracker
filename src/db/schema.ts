@@ -1,4 +1,4 @@
-import { Db } from './database';
+import type { Db } from './database';
 
 const CREATE_TITLES = `
   CREATE TABLE titles (
@@ -25,6 +25,13 @@ const CREATE_WATCHED_EPISODES = `
   )
 `;
 
+const CREATE_SETTINGS = `
+  CREATE TABLE settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )
+`;
+
 async function readUserVersion(db: Db): Promise<number> {
   const result = await db.execute('PRAGMA user_version');
   const version = result.rows[0]?.user_version;
@@ -38,5 +45,9 @@ export async function migrate(db: Db): Promise<void> {
     await db.execute(CREATE_TITLES);
     await db.execute(CREATE_WATCHED_EPISODES);
     await db.execute('PRAGMA user_version = 1');
+  }
+  if (version < 2) {
+    await db.execute(CREATE_SETTINGS);
+    await db.execute('PRAGMA user_version = 2');
   }
 }
