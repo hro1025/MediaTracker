@@ -5,6 +5,7 @@ import {
   addTitle,
   getTitle,
   listTitlesByStatus,
+  markMovieWatched,
   removeTitle,
   setStatus,
   updateTotalEpisodes,
@@ -148,5 +149,27 @@ describe('resetProgress', () => {
     expect(title?.watchedCount).toBe(0);
     expect(title?.lastWatchedAt).toBeNull();
     expect(title?.status).toBe('watching');
+  });
+});
+
+describe('markMovieWatched', () => {
+  test('sets the movie to done and records the time', async () => {
+    const id = await addTitle(
+      db,
+      newTitle({
+        tmdbId: 603,
+        mediaType: 'movie',
+        name: 'The Matrix',
+        totalEpisodes: 1,
+        status: 'watchlist',
+      }),
+      100,
+    );
+
+    await markMovieWatched(db, id, 500);
+
+    const movie = await getTitle(db, 'movie', 603);
+    expect(movie?.status).toBe('done');
+    expect(movie?.lastWatchedAt).toBe(500);
   });
 });

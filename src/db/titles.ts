@@ -130,3 +130,14 @@ export async function updateTotalEpisodes(
 export async function removeTitle(db: Db, id: number): Promise<void> {
   await db.execute('DELETE FROM titles WHERE id = ?', [id]);
 }
+
+export async function markMovieWatched(
+  db: Db,
+  id: number,
+  now: number,
+): Promise<void> {
+  await db.execute(
+    "UPDATE titles SET status = 'done', last_watched_at = ? WHERE id = ?",
+    [now, id],
+  );
+}

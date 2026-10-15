@@ -1,5 +1,6 @@
 import type {
   Badge,
+  Episode,
   EpisodeRef,
   NextEpisode,
   SeasonSummary,
@@ -164,4 +165,16 @@ export function formatNextEpisode(
     return null;
   }
   return `Next: S${next.seasonNumber} E${next.episodeNumber} · ${date}`;
+}
+
+export function airedEpisodes(
+  episodes: readonly Episode[],
+  today: string,
+): EpisodeRef[] {
+  return episodes
+    .filter(episode => isAired(episode.airDate, today))
+    .map(episode => ({
+      seasonNumber: episode.seasonNumber,
+      episodeNumber: episode.episodeNumber,
+    }));
 }

@@ -30,6 +30,7 @@ import type {
 } from '../domain/types';
 import { toNewTitle } from '../domain/newTitle';
 import {
+  airedEpisodes,
   episodeKey,
   episodesUpTo,
   formatNextEpisode,
@@ -48,6 +49,7 @@ import { getAppDb } from '../db/appDb';
 import {
   addTitle,
   getTitle,
+  markMovieWatched,
   setStatus,
   updateTotalEpisodes,
 } from '../db/titles';
@@ -70,9 +72,7 @@ function metaLine(loaded: LoadedDetails): string {
   if (loaded.mediaType === 'tv') {
     const seasons = loaded.details.seasons.length;
     const episodes = loaded.details.totalEpisodes;
-    return `Series · ${seasons} ${
-      seasons === 1 ? 'season' : 'seasons'
-    } · ${episodes} episodes`;
+    return `Series · ${seasons} ${seasons === 1 ? 'season' : 'seasons'} · ${episodes} episodes`;
   }
   const year = loaded.details.releaseDate?.slice(0, 4);
   return year !== undefined ? `Movie · ${year}` : 'Movie';
@@ -82,6 +82,14 @@ function sameEpisode(a: EpisodeRef, b: EpisodeRef): boolean {
   return (
     a.seasonNumber === b.seasonNumber && a.episodeNumber === b.episodeNumber
   );
+}
+
+function mergeEpisodes(
+  previous: readonly EpisodeRef[],
+  added: readonly EpisodeRef[],
+): EpisodeRef[] {
+  const keys = new Set(previous.map(episodeKey));
+  return [...previous, ...added.filter(r => !keys.has(episodeKey(r)))];
 }
 
 function chipCenter(chip: ChipLayout): number {
@@ -149,16 +157,11 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
           details.mediaType === 'tv' &&
           local.totalEpisodes !== details.details.totalEpisodes
         ) {
-          await updateTotalEpisodes(
-            db,
-            local.id,
-            details.details.totalEpisodes,
-          );
+          await updateTotalEpisodes(db, local.id, details.details.totalEpisodes);
           local = await getTitle(db, mediaType, tmdbId);
         }
 
-        const watchedList =
-          local !== null ? await listWatched(db, local.id) : [];
+        const watchedList = local !== null ? await listWatched(db, local.id) : [];
 
         if (!cancelled) {
           setLoaded(details);
@@ -276,8 +279,6 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
   }, [tracked, statusProgress]);
 
   // Scroll the chip row so this season's chip is in the middle.
-  // Called directly from the pager and tap handlers, without waiting
-  // for React to re-render.
   function centerChip(seasonNumber: number, animated: boolean) {
     const chip = chipLayouts.current[seasonNumber];
     if (chip === undefined || chipRowWidth.current === 0) {
@@ -335,6 +336,33 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
     }
   }
 
+  // "Mark as Done" for series (ticks every aired episode),
+  // "Mark as watched" for movies.
+  async function finish() {
+    if (tracked === null || loaded === null) {
+      return;
+    }
+    setTracked({ ...tracked, status: 'done' });
+    try {
+      const db = await getAppDb();
+      const now = Date.now();
+      if (loaded.mediaType === 'movie') {
+        await markMovieWatched(db, tracked.id, now);
+      } else {
+        const lists = await Promise.all(
+          seasons.map(s => getSeason(tmdbId, s.seasonNumber)),
+        );
+        const aired = airedEpisodes(lists.flat(), isoDate(new Date()));
+        setWatched(previous => mergeEpisodes(previous, aired));
+        await markEpisodes(db, tracked.id, aired, now);
+        await setStatus(db, tracked.id, 'done');
+      }
+    } catch (e) {
+      console.log('Finish failed:', e);
+    }
+    await reloadLocal();
+  }
+
   async function toggleEpisode(episode: Episode, isWatched: boolean) {
     if (tracked === null) {
       return;
@@ -350,10 +378,7 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
     if (isWatched) {
       setWatched(previous => previous.filter(r => !sameEpisode(r, ref)));
     } else {
-      setWatched(previous => {
-        const keys = new Set(previous.map(episodeKey));
-        return [...previous, ...toMark.filter(r => !keys.has(episodeKey(r)))];
-      });
+      setWatched(previous => mergeEpisodes(previous, toMark));
       if (nextStatus !== tracked.status) {
         setTracked({ ...tracked, status: nextStatus });
       }
@@ -391,6 +416,7 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
     [],
   );
 
+  // Tap on a chip: one smooth scroll to the middle.
   function selectSeason(seasonNumber: number) {
     const index = seasons.findIndex(s => s.seasonNumber === seasonNumber);
     if (index >= 0) {
@@ -399,12 +425,13 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
     }
   }
 
+  // Swipe: jump straight to the middle, so fast swipes do not stack up.
   function onPageSelected(position: number) {
     const season = seasons[position];
     if (season === undefined) {
       return;
     }
-    centerChip(season.seasonNumber, true);
+    centerChip(season.seasonNumber, false);
     setSelectedSeason(season.seasonNumber);
   }
 
@@ -429,12 +456,10 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
   const blurUri = posterUrl(loaded.details.posterPath, 'w185');
   const watchedKeys = new Set(watched.map(episodeKey));
   const pagerHeight =
-    selectedSeason !== null ? pageHeights[selectedSeason] ?? 200 : 200;
+    selectedSeason !== null ? (pageHeights[selectedSeason] ?? 200) : 200;
 
   const percent =
-    tracked !== null
-      ? progressPercent(watched.length, tracked.totalEpisodes)
-      : 0;
+    tracked !== null ? progressPercent(watched.length, tracked.totalEpisodes) : 0;
   const showProgress = tracked !== null && loaded.mediaType === 'tv';
   const upNext = nextToWatch(seasons, watched);
   const progressText =
@@ -443,6 +468,8 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
     loaded.mediaType === 'tv'
       ? formatNextEpisode(loaded.details.nextEpisode, today)
       : null;
+  const showFinish = tracked !== null && tracked.status !== 'done';
+  const isMovie = loaded.mediaType === 'movie';
 
   return (
     <Animated.ScrollView
@@ -515,6 +542,25 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
             <Text style={styles.nextText}>{nextLine}</Text>
           </View>
         )}
+
+        {showFinish && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.finishButton,
+              pressed && styles.finishPressed,
+            ]}
+            onPress={finish}
+          >
+            <MaterialIcons
+              name={isMovie ? 'check-circle' : 'done-all'}
+              size={20}
+              color="#121318"
+            />
+            <Text style={styles.finishText}>
+              {isMovie ? 'Mark as watched' : 'Mark as Done'}
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       {seasons.length > 0 && selectedSeason !== null && (
@@ -551,9 +597,7 @@ export function DetailsScreen({ route }: Props): React.JSX.Element {
                     <Animated.View
                       style={[styles.seasonActive, { opacity: activeOpacity }]}
                     >
-                      <Text
-                        style={[styles.seasonText, styles.seasonActiveText]}
-                      >
+                      <Text style={[styles.seasonText, styles.seasonActiveText]}>
                         Season {season.seasonNumber}
                       </Text>
                     </Animated.View>
@@ -741,6 +785,23 @@ const styles = StyleSheet.create({
   },
   nextText: {
     color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  finishButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
+    backgroundColor: '#a8c7fa',
+  },
+  finishPressed: {
+    opacity: 0.7,
+  },
+  finishText: {
+    color: '#121318',
     fontWeight: 'bold',
   },
   seasonRow: {
