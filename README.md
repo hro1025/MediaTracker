@@ -1,48 +1,48 @@
-# MediaTracker
+<img src="assets/logo.png" width="96" alt="Media Tracker logo">
 
-An Android app in React Native and strict TypeScript that tracks the movies, series and anime I watch.
+# Media Tracker
 
-TMDB supplies what exists (search, series, seasons, episodes, movies and posters), and a SQLite database on the phone remembers what I have watched.
+Keep track of the movies, series and anime you watch, right on your Android phone.
 
 ## Features
 
 - Search movies, series and anime as you type
-- Poster grid with Watching, Watchlist and Done tabs, swipeable
-- Progress badge on every poster
-- Details page with swipeable seasons and episode tracking
-- Marking an episode also marks every episode before it
-- Upcoming episodes and the next air date
-- Select posters to reset progress or remove them
-- TMDB responses cached and preloaded for fast loading
+- Sort everything into Watching, Watchlist and Done, and swipe between them
+- See your progress on every poster
+- Tick off episodes season by season. Ticking one also ticks every episode before it.
+- See which episodes are coming up and when the next one airs
+- Mark a whole series as done, or a movie as watched, in one tap
+- Hold a poster to select it, then reset its progress or remove it
+- Everything is stored on your phone. No account, no cloud.
 
-## Structure
+## Install
 
-```
-MediaTracker/
-├── android/        generated Android project, built by Gradle
-├── assets/         bundled images (the TMDB logo)
-└── src/
-    ├── config/     TMDB token (git-ignored) and its example file
-    ├── domain/     types and pure progress logic, no I/O
-    ├── tmdb/       TMDB client, cache, response types, mapping and fixtures
-    ├── db/         SQLite access, schema and queries
-    ├── hooks/      reusable React hooks
-    ├── navigation/ stack navigator and route types
-    ├── components/ small reusable UI pieces
-    └── screens/    Home, Search, Details and About
-```
+1. Download the latest APK from [Releases](https://github.com/hro1025/MediaTracker/releases).
+2. Open it on your Android phone. If Android asks, allow "Install unknown apps" for your browser or file manager.
 
-## Commands
+## First start: add your TMDB token
 
-```
-npm install                       install dependencies
-npm start                         start Metro (keep it running in its own terminal)
-npm run android                   build, install and open the app on the phone
-npm run android -- --mode release build and install a release version
-npm run check                     type check, lint and tests in one go
-npm test                          run all tests
-adb logcat ReactNativeJS:V *:S    show the app's log output
-```
+Media Tracker gets its movie and series data from TMDB. To use it, you need your own free token:
+
+1. Create a free account at [themoviedb.org](https://www.themoviedb.org/signup).
+2. Go to [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api) and request an API key (choose "Personal" use).
+3. Copy the **API Read Access Token**, the long one starting with `eyJ`.
+4. In the app, tap ⋮ in the search bar, then open **About**.
+5. Paste the token and tap **Save token**.
+
+The token is stored only on your phone and is only sent to TMDB.
+
+## How to use
+
+- **Add a title:** tap the search bar, search, open a result and tap **Add to Watching** or **Add to Watchlist**.
+- **Track episodes:** open a series, swipe or tap to a season, and tap an episode to tick it.
+- **Change the status:** use the Watching, Watchlist and Done tabs on a title's page.
+- **Finish something:** tap **Mark as Done** on a series, or **Mark as watched** on a movie.
+- **Reset or remove:** hold a poster on the home screen, select more if you like, then use the reset or trash icon.
+
+## Privacy
+
+Media Tracker has no account and no server of its own. Your list stays in a database on your phone, and the app only talks to TMDB to load titles, posters and episodes. Uninstalling the app deletes your list.
 
 ## Credits
 
