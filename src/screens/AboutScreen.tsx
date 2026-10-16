@@ -19,6 +19,7 @@ import {
   describeTmdbError,
   hasTmdbToken,
   setTmdbToken,
+  getTmdbToken,
   tmdbGet,
 } from '../tmdb/client';
 import { clearCache } from '../tmdb/cache';
@@ -46,13 +47,14 @@ export function AboutScreen(_props: Props): React.JSX.Element {
   const [hasToken, setHasToken] = useState(hasTmdbToken());
   const [state, setState] = useState<TokenState>({ kind: 'idle' });
 
-  async function saveToken() {
+  async function saveToken(): Promise<void> {
     const value = input.trim();
     if (value === '') {
       return;
     }
     setState({ kind: 'checking' });
-    const hadToken = hasTmdbToken();
+
+    const previousToken = getTmdbToken();
     setTmdbToken(value);
     clearCache();
 
@@ -65,9 +67,8 @@ export function AboutScreen(_props: Props): React.JSX.Element {
       setState({ kind: 'saved' });
     } catch (e) {
       // Keep the old token working if the new one is wrong.
-      if (!hadToken) {
-        setTmdbToken(null);
-      }
+      setTmdbToken(previousToken);
+      clearCache();
       setState({ kind: 'error', message: describeTmdbError(e) });
     }
   }
@@ -202,8 +203,7 @@ export function AboutScreen(_props: Props): React.JSX.Element {
         resizeMode="contain"
       />
       <Text style={styles.text}>
-        This product uses the TMDB API but is not endorsed or certified by
-        TMDB.
+        This product uses the TMDB API but is not endorsed or certified by TMDB.
       </Text>
     </ScrollView>
   );
