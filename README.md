@@ -47,3 +47,5 @@ Media Tracker has no account and no server of its own. Your list stays in a data
 ## Credits
 
 This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+UI design inspired by [Kotatsu-Redo](https://github.com/Kotatsu-Redo/Kotatsu-Redo), a fork of [Kotatsu](https://github.com/KotatsuApp/Kotatsu).
